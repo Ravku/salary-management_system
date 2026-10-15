@@ -1,4 +1,4 @@
-package com.acme.salary_management;
+package com.acme.hr;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
