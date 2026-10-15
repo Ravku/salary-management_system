@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: salary-management
+  datasource:
+    url: jdbc:sqlite:mydb.db
+    driver-class-name: org.sqlite.JDBC
+
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
