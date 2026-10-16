@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    private static final String BASIC_AUTH_SCHEME = "basicAuth";
+    private static final String BEARER_AUTH_SCHEME = "bearerAuth";
 
     @Bean
     public OpenAPI salaryManagementOpenAPI() {
@@ -21,10 +21,11 @@ public class OpenApiConfig {
                         .description("Employee, salary, and workforce analytics API")
                         .version("v1"))
                 .components(new Components().addSecuritySchemes(
-                        BASIC_AUTH_SCHEME,
+                        BEARER_AUTH_SCHEME,
                         new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)
-                                .scheme("basic")))
-                .addSecurityItem(new SecurityRequirement().addList(BASIC_AUTH_SCHEME));
+                                .scheme("bearer")
+                                .bearerFormat("JWT")))
+                .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH_SCHEME));
     }
 }
