@@ -10,3 +10,14 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+springdoc:
+  enable-data-rest: false
+
+app:
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  security:
+    jwt:
+      secret: ${APP_SECURITY_JWT_SECRET:}
+      expiration: PT1H
