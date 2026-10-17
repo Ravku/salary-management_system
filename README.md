@@ -19,6 +19,12 @@ The application requires bootstrap credentials for both the `HRManager` and `ADM
 | `APP_BOOTSTRAP_ADMIN_PASSWORD` | Initial ADMIN password |
 | `APP_SECURITY_JWT_SECRET` | Secret used to sign JWTs; use a unique random value of at least 32 characters |
 | `APP_CORS_ALLOWED_ORIGINS` | Comma-separated allowed frontend origins; defaults to `http://localhost:4200` |
+| `REDIS_HOST` | Redis server hostname; defaults to `localhost` |
+| `REDIS_PORT` | Redis server port; defaults to `6379` |
+| `REDIS_PASSWORD` | Redis password; empty by default |
+
+Redis is used as an optional shared cache for employee reads and analytics; SQLite remains the system of record. Start Redis before the application for cache hits. If Redis is unavailable, cache errors are logged and requests continue using SQLite.
+Employee and salary response data is stored in Redis, so secure the Redis endpoint and network access appropriately; configure `REDIS_PASSWORD` when Redis authentication is enabled.
 
 On Windows:
 
@@ -30,6 +36,9 @@ $env:APP_BOOTSTRAP_ADMIN_PASSWORD = "replace-with-a-different-strong-secret"
 $env:APP_SECURITY_JWT_SECRET = "replace-with-a-random-secret-of-at-least-32-characters"
 # Set this to your Angular app origin if it is not http://localhost:4200
 $env:APP_CORS_ALLOWED_ORIGINS = "http://localhost:4200"
+# Optional overrides if Redis is not running on localhost:6379
+$env:REDIS_HOST = "localhost"
+$env:REDIS_PORT = "6379"
 .\gradlew.bat bootRun
 ```
 
@@ -43,6 +52,9 @@ export APP_BOOTSTRAP_ADMIN_PASSWORD="replace-with-a-different-strong-secret"
 export APP_SECURITY_JWT_SECRET="replace-with-a-random-secret-of-at-least-32-characters"
 # Set this to your Angular app origin if it is not http://localhost:4200
 export APP_CORS_ALLOWED_ORIGINS="http://localhost:4200"
+# Optional overrides if Redis is not running on localhost:6379
+export REDIS_HOST="localhost"
+export REDIS_PORT="6379"
 ./gradlew bootRun
 ```
 
@@ -53,6 +65,8 @@ At startup, the application creates those two accounts in SQLite if their userna
 The API is available at `http://localhost:8080`. Swagger UI is available at `http://localhost:8080/swagger-ui/index.html`, and the OpenAPI JSON document is at `http://localhost:8080/v3/api-docs`. The Swagger UI and spec are public; use **Authorize** in Swagger UI with the bearer token returned by login when trying protected API operations. Spring Data REST repository routes are not included in the OpenAPI document; the documented API routes are the explicit employee, analytics, and seed controllers. Restart the application after changing configuration.
 
 SQLite uses the `mydb.db` file in the application working directory. Hibernate updates the schema on startup.
+
+Redis caches employee details for up to 10 minutes, employee search pages for up to 2 minutes, and analytics results for up to 5 minutes. Successful employee creation/updates, salary updates, and sample-data seeding evict affected employee and analytics caches. Caches use JSON values and Redis string keys.
 
 Run tests with `.\gradlew.bat test` on Windows or `./gradlew test` on macOS/Linux.
 

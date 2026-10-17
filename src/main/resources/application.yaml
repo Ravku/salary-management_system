@@ -5,6 +5,17 @@ spring:
     url: jdbc:sqlite:mydb.db
     driver-class-name: org.sqlite.JDBC
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 2s
+      timeout: 2s
+
+  cache:
+    type: redis
+
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:

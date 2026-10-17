@@ -3,6 +3,7 @@ package com.acme.hr.controller;
 import com.acme.hr.dto.EmployeeDetailsResponse;
 import com.acme.hr.dto.EmployeeRequest;
 import com.acme.hr.dto.SalaryUpdateRequest;
+import com.acme.hr.service.EmployeeSearchCacheService;
 import com.acme.hr.service.EmployeeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,9 +24,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final EmployeeSearchCacheService employeeSearchCacheService;
 
-    public EmployeeController(EmployeeService employeeService) {
+    public EmployeeController(
+            EmployeeService employeeService, EmployeeSearchCacheService employeeSearchCacheService) {
         this.employeeService = employeeService;
+        this.employeeSearchCacheService = employeeSearchCacheService;
     }
 
     @GetMapping
@@ -36,7 +40,8 @@ public class EmployeeController {
             @RequestParam(required = false) String jobTitle,
             @RequestParam(required = false) Boolean active,
             @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-        return employeeService.findEmployees(search, country, department, jobTitle, active, pageable);
+        return employeeSearchCacheService.findEmployees(search, country, department, jobTitle, active, pageable)
+                .toPage();
     }
 
     @GetMapping("/{id}")
