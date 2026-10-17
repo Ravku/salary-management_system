@@ -3,10 +3,12 @@ package com.acme.hr.service;
 import com.acme.hr.dto.AnalyticsSummary;
 import com.acme.hr.dto.GroupAnalytics;
 import com.acme.hr.dto.SalaryStatistics;
+import com.acme.hr.config.CacheConfig;
 import com.acme.hr.entity.Employee;
 import com.acme.hr.entity.EmployeeSalary;
 import com.acme.hr.repository.EmployeeRepository;
 import com.acme.hr.repository.SalaryRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(CacheConfig.ANALYTICS_SUMMARY)
     public AnalyticsSummary summary() {
         List<Employee> employees = employeeRepository.findAll();
         Map<Long, EmployeeSalary> latestSalaries = latestSalaries();
@@ -44,11 +47,13 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(CacheConfig.ANALYTICS_BY_COUNTRY)
     public List<GroupAnalytics> byCountry() {
         return grouped(Employee::getCountry);
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(CacheConfig.ANALYTICS_BY_DEPARTMENT)
     public List<GroupAnalytics> byDepartment() {
         return grouped(Employee::getDepartment);
     }

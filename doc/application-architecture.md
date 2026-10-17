@@ -16,6 +16,7 @@ flowchart LR
     App --> Repositories["Spring Data JPA repositories"]
     Repositories --> ORM["Hibernate + SQLite dialect"]
     ORM --> DB[("SQLite: mydb.db")]
+    App <-->|"cache-aside, JSON"| Cache[("Redis")]
     API -. "OpenAPI / Swagger UI" .-> Client
 ```
 
@@ -41,7 +42,8 @@ flowchart TD
     HTTP["HTTP request"] --> Filter["Security filter chain"]
     Filter --> Controller["REST controller"]
     Controller --> Service["Application service"]
-    Service --> Repository["Spring Data repository"]
+    Service -->|"cache hit"| Cache[("Redis")]
+    Service -->|"cache miss"| Repository["Spring Data repository"]
     Repository --> JPA["JPA / Hibernate"]
     JPA --> SQLite[("SQLite")]
     Service --> DTO["Response DTO"]
@@ -59,6 +61,20 @@ The explicit REST controllers are:
 | `SeedController` | `/api` | `POST /seed` |
 
 The employee collection route returns a Spring `Page` and supports zero-based paging, sorting, a case-insensitive search over employee code/name/email, and exact case-insensitive country, department, and job-title filters plus an active-status filter.
+
+### Redis cache
+
+Redis is a cache-aside layer for service-level employee detail, employee search page, and analytics reads. A cache hit returns the JSON-deserialized DTO/page result without querying SQLite; a miss runs the normal service/repository path and stores the result. SQLite remains authoritative. Keys are namespaced by cache and employee search keys include all search/filter arguments and page/sort values. Values use a concrete Jackson JSON type per cache (including the generic item type for analytics lists), avoiding polymorphic `Object` deserialization. The `salary-management:v2:` key prefix prevents older cache entries written with a different serializer from being read after upgrade.
+
+| Cache | Contents | TTL |
+|---|---|---:|
+| `employeeDetails` | Employee detail DTO, including latest salary | 10 minutes |
+| `employeeSearch` | Paginated employee search results | 2 minutes |
+| `analyticsSummary` | Total/active headcount and currency salary statistics | 5 minutes |
+| `analyticsByCountry` | Country-grouped headcount and salary statistics | 5 minutes |
+| `analyticsByDepartment` | Department-grouped headcount and salary statistics | 5 minutes |
+
+Employee create/update, salary update, and seeding evict the employee and analytics caches after successful method execution. `RepositoryCacheEvictionHandler` also invalidates them for employee or salary writes through Spring Data REST repository routes. Redis cache access errors are logged and treated as cache failures so the request proceeds through the database-backed service path; this makes Redis optional for availability, but means cache invalidation also cannot take effect during a Redis outage. Cache misses and Redis failures therefore fall back to SQLite.
 
 ## 4. Main request flows
 
@@ -143,22 +159,27 @@ Repositories extend Spring Data JPA: `EmployeeRepository` also supports JPA spec
 | `APP_SECURITY_JWT_SECRET` | Required; minimum 32 bytes | HS256 signing and verification key. |
 | `app.security.jwt.expiration` | `PT1H` | Access-token lifetime. |
 | `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | Comma-separated exact browser origins; wildcard and empty configurations are rejected. |
+| `REDIS_HOST` | `localhost` | Redis cache host. |
+| `REDIS_PORT` | `6379` | Redis cache port. |
+| `REDIS_PASSWORD` | Empty | Optional Redis authentication password. |
 
-The runtime dependencies include Spring MVC/Web, Spring Security OAuth2 Resource Server, Spring Data JPA and Data REST, SQLite JDBC, Hibernate's community dialects, and SpringDoc OpenAPI. Gradle configures Java 25 and JUnit Platform tests.
+Redis connection and command timeouts are set to two seconds. The runtime dependencies include Spring MVC/Web, Spring Security OAuth2 Resource Server, Spring Data JPA and Data REST, Spring Cache and Spring Data Redis, SQLite JDBC, Hibernate's community dialects, and SpringDoc OpenAPI. Gradle configures Java 25 and JUnit Platform tests.
 
 ## 7. Source map
 
 ```text
 src/main/java/com/acme/hr/
   SalaryManagementApplication.java
-  config/       SecurityConfig, OpenApiConfig, UserAccountBootstrap, SeedDataConfig
+  config/       SecurityConfig, CacheConfig, RepositoryCacheEvictionHandler,
+                OpenApiConfig, UserAccountBootstrap, SeedDataConfig
   controller/   AuthController, EmployeeController, AnalyticsController, SeedController
+  cache/        JSON-serializable employee search page snapshot for Redis
   dto/          Request and response records for login, employees, salaries, and analytics
   entity/       Employee, EmployeeSalary, UserAccount
   exception/    ApiExceptionHandler, ResourceNotFoundException
   repository/   EmployeeRepository, SalaryRepository, UserAccountRepository
-  service/      AuthService, EmployeeService, AnalyticsService, SeedService,
-                UserAccountDetailsService
+  service/      AuthService, EmployeeService, EmployeeSearchCacheService,
+                AnalyticsService, SeedService, UserAccountDetailsService
 src/main/resources/
   application.yaml
   static/       (no application-owned static assets)

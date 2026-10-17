@@ -4,12 +4,16 @@ import com.acme.hr.dto.EmployeeDetailsResponse;
 import com.acme.hr.dto.EmployeeRequest;
 import com.acme.hr.dto.EmployeeSalaryResponse;
 import com.acme.hr.dto.SalaryUpdateRequest;
+import com.acme.hr.config.CacheConfig;
 import com.acme.hr.entity.Employee;
 import com.acme.hr.entity.EmployeeSalary;
 import com.acme.hr.exception.ResourceNotFoundException;
 import com.acme.hr.repository.EmployeeRepository;
 import com.acme.hr.repository.SalaryRepository;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -58,11 +62,19 @@ public class EmployeeService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.EMPLOYEE_DETAILS, key = "#id")
     public EmployeeDetailsResponse getEmployee(Long id) {
         return toResponse(getEmployeeEntity(id));
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.EMPLOYEE_DETAILS, allEntries = true),
+            @CacheEvict(value = CacheConfig.EMPLOYEE_SEARCH, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_SUMMARY, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_BY_COUNTRY, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_BY_DEPARTMENT, allEntries = true)
+    })
     public EmployeeDetailsResponse createEmployee(EmployeeRequest request) {
         validateEmployee(request);
         Employee employee = new Employee();
@@ -71,6 +83,13 @@ public class EmployeeService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.EMPLOYEE_DETAILS, allEntries = true),
+            @CacheEvict(value = CacheConfig.EMPLOYEE_SEARCH, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_SUMMARY, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_BY_COUNTRY, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_BY_DEPARTMENT, allEntries = true)
+    })
     public EmployeeDetailsResponse updateEmployee(Long id, EmployeeRequest request) {
         validateEmployee(request);
         Employee employee = getEmployeeEntity(id);
@@ -79,6 +98,13 @@ public class EmployeeService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.EMPLOYEE_DETAILS, allEntries = true),
+            @CacheEvict(value = CacheConfig.EMPLOYEE_SEARCH, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_SUMMARY, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_BY_COUNTRY, allEntries = true),
+            @CacheEvict(value = CacheConfig.ANALYTICS_BY_DEPARTMENT, allEntries = true)
+    })
     public EmployeeDetailsResponse updateSalary(Long id, SalaryUpdateRequest request) {
         if (request == null || request.baseSalary() == null || request.baseSalary() < 0
                 || request.currency() == null || request.currency().isBlank()

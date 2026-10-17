@@ -3,6 +3,8 @@ package com.acme.hr.controller;
 import com.acme.hr.dto.EmployeeDetailsResponse;
 import com.acme.hr.dto.EmployeeRequest;
 import com.acme.hr.dto.SalaryUpdateRequest;
+import com.acme.hr.cache.EmployeeSearchPageCache;
+import com.acme.hr.service.EmployeeSearchCacheService;
 import com.acme.hr.service.EmployeeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,24 +23,28 @@ import static org.mockito.Mockito.*;
 class EmployeeControllerTest {
 
     private EmployeeService employeeService;
+    private EmployeeSearchCacheService employeeSearchCacheService;
     private EmployeeController controller;
 
     @BeforeEach
     void setUp() {
         employeeService = mock(EmployeeService.class);
-        controller = new EmployeeController(employeeService);
+        employeeSearchCacheService = mock(EmployeeSearchCacheService.class);
+        controller = new EmployeeController(employeeService, employeeSearchCacheService);
     }
 
     @Test
     void getEmployeesPassesFiltersAndPaginationToService() {
         PageRequest pageable = PageRequest.of(1, 5);
         Page<EmployeeDetailsResponse> page = new PageImpl<>(List.of(), pageable, 0);
-        when(employeeService.findEmployees("Asha", "India", "Engineering", "Developer", true, pageable))
-                .thenReturn(page);
+        when(employeeSearchCacheService.findEmployees(
+                "Asha", "India", "Engineering", "Developer", true, pageable))
+                .thenReturn(EmployeeSearchPageCache.from(page));
 
         assertEquals(page, controller.getEmployees(
                 "Asha", "India", "Engineering", "Developer", true, pageable));
-        verify(employeeService).findEmployees("Asha", "India", "Engineering", "Developer", true, pageable);
+        verify(employeeSearchCacheService).findEmployees(
+                "Asha", "India", "Engineering", "Developer", true, pageable);
     }
 
     @Test
